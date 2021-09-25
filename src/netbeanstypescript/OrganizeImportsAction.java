@@ -8,7 +8,7 @@ import javax.swing.text.JTextComponent;
 import org.json.simple.JSONObject;
 import org.netbeans.api.editor.EditorActionNames;
 import org.netbeans.api.editor.EditorActionRegistration;
-import org.netbeans.api.progress.ProgressUtils;
+import org.netbeans.api.progress.BaseProgressUtils;
 import org.netbeans.editor.BaseAction;
 import org.netbeans.editor.BaseDocument;
 import org.netbeans.editor.Utilities;
@@ -54,7 +54,7 @@ public class OrganizeImportsAction extends BaseAction {
                 }
             }
         }
-        ProgressUtils.runOffEventDispatchThread(new OrganizeImportsTask(),
+        BaseProgressUtils.runOffEventDispatchThread(new OrganizeImportsTask(),
                 "Organize Imports", cancel, false);
     }
 }

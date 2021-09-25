@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import org.netbeans.api.progress.ProgressHandle;
-import org.netbeans.api.progress.ProgressHandleFactory;
 import org.netbeans.modules.parsing.api.Snapshot;
 import org.netbeans.modules.parsing.api.Source;
 import org.netbeans.modules.parsing.spi.indexing.Context;
@@ -145,7 +144,7 @@ public class TSIndexerFactory extends CustomIndexerFactory {
     }
 
     static void compileIfEnabled(FileObject root, FileObject[] fileObjects) {
-        ProgressHandle progress = ProgressHandleFactory.createHandle("TypeScript compile on save");
+        ProgressHandle progress = ProgressHandle.createHandle("TypeScript compile on save");
         progress.start();
         try {
             for (FileObject fileObject: fileObjects) {

@@ -50,7 +50,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.netbeans.api.progress.ProgressHandle;
-import org.netbeans.api.progress.ProgressHandleFactory;
 import org.netbeans.modules.parsing.api.Snapshot;
 import org.netbeans.modules.parsing.spi.indexing.Context;
 import org.netbeans.modules.parsing.spi.indexing.ErrorsCache;
@@ -238,7 +237,7 @@ public class TSService {
         }
         new Runnable() {
             RequestProcessor.Task task = RP.create(this);
-            ProgressHandle progress = ProgressHandleFactory.createHandle("TypeScript error checking", task);
+            ProgressHandle progress = ProgressHandle.createHandle("TypeScript error checking", task);
             @Override
             public void run() {
                 TSIndexerFactory.compileIfEnabled(program.root, compileOnSave);

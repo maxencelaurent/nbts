@@ -45,6 +45,7 @@ package netbeanstypescript;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Caret;
+import javax.swing.text.Document;
 import org.netbeans.api.editor.mimelookup.MimeRegistration;
 import org.netbeans.api.lexer.Language;
 import org.netbeans.api.lexer.Token;
@@ -59,6 +60,7 @@ import org.netbeans.modules.csl.spi.GsfUtilities;
 import netbeanstypescript.api.lexer.JsTokenId;
 import netbeanstypescript.api.lexer.LexUtilities;
 import netbeanstypescript.options.OptionsUtils;
+import org.netbeans.api.editor.document.LineDocumentUtils;
 import org.netbeans.spi.editor.typinghooks.TypedTextInterceptor;
 
 /**
@@ -136,7 +138,7 @@ public class JsTypedTextInterceptor implements TypedTextInterceptor {
                                 ts.move(dotPos);
 
                                 if (ts.moveNext() && (ts.offset() < dotPos)) {
-                                    GsfUtilities.setLineIndentation(doc, dotPos, previousAdjustmentIndent);
+                                    GsfUtilities.setLineIndentation((Document)doc, dotPos, previousAdjustmentIndent);
                                 }
                             }
                         }
@@ -343,9 +345,9 @@ public class JsTypedTextInterceptor implements TypedTextInterceptor {
 
                 if (begin != OffsetRange.NONE) {
                     int beginOffset = begin.getStart();
-                    int indent = GsfUtilities.getLineIndent(doc, beginOffset);
-                    previousAdjustmentIndent = GsfUtilities.getLineIndent(doc, offset);
-                    GsfUtilities.setLineIndentation(doc, offset, indent);
+                    int indent = GsfUtilities.getLineIndent((Document)doc, beginOffset);
+                    previousAdjustmentIndent = GsfUtilities.getLineIndent((Document)doc, offset);
+                    GsfUtilities.setLineIndentation((Document)doc, offset, indent);
                     previousAdjustmentOffset = caret.getDot();
                 }
             }
@@ -417,7 +419,7 @@ public class JsTypedTextInterceptor implements TypedTextInterceptor {
             previousToken = ts.token();
         }
 
-        int lastNonWhite = Utilities.getRowLastNonWhite(doc, dotPos);
+        int lastNonWhite = LineDocumentUtils.getLineLastNonWhitespace(doc, dotPos);
 
         // eol - true if the caret is at the end of line (ignoring whitespaces)
         boolean eol = lastNonWhite < dotPos;
@@ -527,13 +529,13 @@ public class JsTypedTextInterceptor implements TypedTextInterceptor {
             return true;
         } else {
             // test that we are in front of ) , " or ' ... etc.
-            int eol = Utilities.getRowEnd(doc, dotPos);
+            int eol = LineDocumentUtils.getLineEnd(doc, dotPos);
 
             if ((dotPos == eol) || (eol == -1)) {
                 return false;
             }
 
-            int firstNonWhiteFwd = Utilities.getFirstNonWhiteFwd(doc, dotPos, eol);
+            int firstNonWhiteFwd = LineDocumentUtils.getNextNonWhitespace(doc, dotPos, eol);
 
             if (firstNonWhiteFwd == -1) {
                 return false;

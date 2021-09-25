@@ -194,7 +194,7 @@ class Program {
     }
     getCompletionEntryDetails(fileName: string, position: number, entryName: string) {
         if (! this.fileInProject(fileName)) return null;
-        return this.service.getCompletionEntryDetails(fileName, position, entryName, void 0, void 0, void 0);
+        return this.service.getCompletionEntryDetails(fileName, position, entryName, undefined, undefined, undefined, undefined);
     }
     getCompletionEntryLocation(fileName: string, position: number, entryName: string) {
         if (! this.fileInProject(fileName)) return null;

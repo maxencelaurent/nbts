@@ -50,7 +50,6 @@ import java.util.logging.Level;
 import javax.swing.AbstractAction;
 import org.json.simple.JSONObject;
 import org.netbeans.api.progress.ProgressHandle;
-import org.netbeans.api.progress.ProgressHandleFactory;
 import org.netbeans.modules.parsing.api.ParserManager;
 import org.netbeans.modules.parsing.api.ResultIterator;
 import org.netbeans.modules.parsing.api.Source;
@@ -61,7 +60,7 @@ import org.openide.filesystems.FileObject;
 import org.openide.filesystems.FileUtil;
 import org.openide.util.Exceptions;
 import org.openide.util.RequestProcessor;
-import org.openide.util.Utilities;
+import org.openide.util.Lookup;
 
 /**
  *
@@ -76,11 +75,11 @@ public class CompileAction extends AbstractAction {
     @Override
     public void actionPerformed(ActionEvent e) {
         final Collection<? extends FileObject> fileObjects =
-                Utilities.actionsGlobalContext().lookupAll(FileObject.class);
+                Lookup.getDefault().lookupAll(FileObject.class);
         class CompileTask extends UserTask implements Runnable {
             @Override
             public void run() {
-                ProgressHandle progress = ProgressHandleFactory.createHandle("TypeScript compile");
+                ProgressHandle progress = ProgressHandle.createHandle("TypeScript compile");
                 progress.start();
                 try {
                     List<Source> sources = new ArrayList<>(fileObjects.size());

@@ -61,6 +61,7 @@ import org.netbeans.api.lexer.TokenSequence;
 import org.netbeans.editor.BaseDocument;
 import org.netbeans.editor.Utilities;
 import netbeanstypescript.lexer.JsDocumentationTokenId;
+import org.netbeans.api.editor.document.LineDocumentUtils;
 //import org.netbeans.modules.javascript2.editor.parser.JsParserResult;
 import org.netbeans.modules.parsing.api.Snapshot;
 import org.openide.util.Exceptions;
@@ -320,8 +321,8 @@ public final class LexUtilities {
     /** Compute the balance of begin/end tokens on the line */
     public static int getLineBalance(BaseDocument doc, int offset, TokenId up, TokenId down) {
         try {
-            int begin = Utilities.getRowStart(doc, offset);
-            int end = Utilities.getRowEnd(doc, offset);
+            int begin = LineDocumentUtils.getLineStart(doc, offset);
+            int end = LineDocumentUtils.getLineEnd(doc, offset);
 
             TokenSequence<? extends JsTokenId> ts = LexUtilities.getJsTokenSequence(doc, begin);
             if (ts == null) {

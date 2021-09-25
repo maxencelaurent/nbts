@@ -7,7 +7,7 @@
     <import file="nbproject/build-impl.xml"/>
 
     <!-- Path to the TypeScript installation to use. -->
-    <property name="typescript" value="${env.HOME}/TypeScript-2.9.1"/>
+    <property name="typescript" value="${env.HOME}/usr/typescript"/>
 
     <target name="compile-ts-services-check" depends="basic-init">
         <uptodate property="compile-ts-services.uptodate" targetfile="${cluster}/nbts-services.js">

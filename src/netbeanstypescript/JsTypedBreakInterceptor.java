@@ -42,10 +42,10 @@
  */
 package netbeanstypescript;
 
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import org.netbeans.api.editor.mimelookup.MimePath;
 import org.netbeans.api.editor.mimelookup.MimeRegistration;
 import org.netbeans.api.editor.mimelookup.MimeRegistrations;
@@ -57,13 +57,13 @@ import org.netbeans.editor.BaseDocument;
 import org.netbeans.editor.Utilities;
 import org.netbeans.lib.editor.util.CharSequenceUtilities;
 import org.netbeans.modules.csl.api.EditorOptions;
-import org.netbeans.modules.csl.api.OffsetRange;
 import org.netbeans.modules.csl.spi.GsfUtilities;
 import org.netbeans.modules.editor.indent.api.IndentUtils;
-//import module1.doc.JsDocumentationCompleter;
 import netbeanstypescript.lexer.JsDocumentationTokenId;
 import netbeanstypescript.api.lexer.JsTokenId;
 import netbeanstypescript.api.lexer.LexUtilities;
+import org.netbeans.api.editor.document.LineDocumentUtils;
+import org.netbeans.api.lexer.TokenId;
 import org.netbeans.spi.editor.typinghooks.TypedBreakInterceptor;
 
 /**
@@ -112,8 +112,8 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
         TokenHierarchy<BaseDocument> tokenHierarchy = TokenHierarchy.get(doc);
         int offset = context.getCaretOffset();
 
-        int lineBegin = Utilities.getRowStart(doc, offset);
-        int lineEnd = Utilities.getRowEnd(doc, offset);
+        int lineBegin = LineDocumentUtils.getLineStart(doc, offset);
+        int lineEnd = LineDocumentUtils.getLineEnd(doc, offset);
 
         if (lineBegin == offset && lineEnd == offset) {
             // Pressed return on a blank newline - do nothing
@@ -138,9 +138,9 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
 
         // Insert a missing }
         if (!id.isError() && isInsertMatchingEnabled() && !isDocToken(id) && isAddRightBrace(doc, offset)) {
-            int indent = GsfUtilities.getLineIndent(doc, offset);
+            int indent = GsfUtilities.getLineIndent((Document)doc, offset);
 
-            int afterLastNonWhite = Utilities.getRowLastNonWhite(doc, offset);
+            int afterLastNonWhite = LineDocumentUtils.getLineLastNonWhitespace(doc, offset);
 
             // We've either encountered a further indented line, or a line that doesn't
             // look like the end we're after, so insert a matching end.
@@ -166,7 +166,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                     // I'm inserting a newline in the middle of a sentence, such as the scenario in #118656
                     // I should insert the end AFTER the text on the line
                     String restOfLine = doc.getText(offset,
-                            Math.min(end, Utilities.getRowEnd(doc, afterLastNonWhite)) - offset);
+                            Math.min(end, LineDocumentUtils.getLineEnd(doc, afterLastNonWhite)) - offset);
                     sb.append("\n"); // XXX On Windows, do \r\n?
                     sb.append(IndentUtils.createIndentString(doc, indent + IndentUtils.indentLevelSize(doc)));
                     // right brace must be included into the correct context - issue #219683
@@ -195,7 +195,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
             // See if it's a block comment opener
             String text = token.text().toString();
             if (comments && text.startsWith("/*") && ts.offset() == Utilities.getRowFirstNonWhite(doc, offset)) {
-                int indent = GsfUtilities.getLineIndent(doc, offset);
+                int indent = GsfUtilities.getLineIndent((Document)doc, offset);
                 StringBuilder sb = new StringBuilder();
                 sb.append("\n"); // NOI18N
                 sb.append(IndentUtils.createIndentString(doc, indent));
@@ -218,7 +218,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
             if (id == JsTokenId.STRING ||
                     (id == JsTokenId.STRING_END) && offset < ts.offset()+ts.token().length()) {
                 // Instead of splitting a string "foobar" into "foo"+"bar", just insert a \ instead!
-                //int indent = GsfUtilities.getLineIndent(doc, offset);
+                //int indent = GsfUtilities.getLineIndent((Document)doc, offset);
                 //int delimiterOffset = id == JsTokenId.STRING_END ? ts.offset() : ts.offset()-1;
                 //char delimiter = doc.getText(delimiterOffset,1).charAt(0);
                 //doc.insertString(offset, delimiter + " + " + delimiter, null);
@@ -234,7 +234,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
             if (id == JsTokenId.REGEXP ||
                     (id == JsTokenId.REGEXP_END) && offset < ts.offset()+ts.token().length()) {
                 // Instead of splitting a string "foobar" into "foo"+"bar", just insert a \ instead!
-                //int indent = GsfUtilities.getLineIndent(doc, offset);
+                //int indent = GsfUtilities.getLineIndent((Document)doc, offset);
                 //doc.insertString(offset, "/ + /", null);
                 //caret.setDot(offset+3);
                 //return offset + 5 + indent;
@@ -263,7 +263,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                 JsTokenId prevTokenId = prevToken.id();
                 if (id == JsTokenId.BRACKET_RIGHT_CURLY && prevTokenId == JsTokenId.BRACKET_LEFT_CURLY ||
                         id == JsTokenId.BRACKET_RIGHT_BRACKET && prevTokenId == JsTokenId.BRACKET_LEFT_BRACKET) {
-                    int indent = GsfUtilities.getLineIndent(doc, offset);
+                    int indent = GsfUtilities.getLineIndent((Document)doc, offset);
                     StringBuilder sb = new StringBuilder();
                     // XXX On Windows, do \r\n?
                     sb.append("\n"); // NOI18N
@@ -302,14 +302,14 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                 && offset > ts.offset() && offset < ts.offset()+ts.token().length()) {
             // Continue *'s
             int begin = Utilities.getRowFirstNonWhite(doc, offset);
-            int end = Utilities.getRowEnd(doc, offset)+1;
+            int end = LineDocumentUtils.getLineEnd(doc, offset)+1;
             if (begin == -1) {
                 begin = end;
             }
             String line = doc.getText(begin, end-begin);
             boolean isBlockStart = line.startsWith("/*") || (begin != -1 && begin < ts.offset());
             if (isBlockStart || line.startsWith("*")) {
-                int indent = GsfUtilities.getLineIndent(doc, offset);
+                int indent = GsfUtilities.getLineIndent((Document)doc, offset);
                 StringBuilder sb = new StringBuilder("\n");
                 if (isBlockStart) {
                     indent++;
@@ -335,7 +335,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                     // Copy existing indentation inside the block
                     sb.append("*"); //NOI18N
                     int afterStar = isBlockStart ? begin+2 : begin+1;
-                    line = doc.getText(afterStar, Utilities.getRowEnd(doc, afterStar)-afterStar);
+                    line = doc.getText(afterStar, LineDocumentUtils.getLineEnd(doc, afterStar)-afterStar);
                     for (int i = 0; i < line.length(); i++) {
                         char c = line.charAt(i);
                         if (c == ' ' || c == '\t') { //NOI18N
@@ -375,7 +375,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
             // (and a comment from the beginning, not a trailing comment)
             boolean previousLineWasComment = false;
             boolean nextLineIsComment = false;
-            int rowStart = Utilities.getRowStart(doc, offset);
+            int rowStart = LineDocumentUtils.getLineStart(doc, offset);
             if (rowStart > 0) {
                 int prevBegin = Utilities.getRowFirstNonWhite(doc, rowStart - 1);
                 if (prevBegin != -1) {
@@ -386,7 +386,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                     }
                 }
             }
-            int rowEnd = Utilities.getRowEnd(doc, offset);
+            int rowEnd = LineDocumentUtils.getLineEnd(doc, offset);
             if (rowEnd < doc.getLength()) {
                 int nextBegin = Utilities.getRowFirstNonWhite(doc, rowEnd + 1);
                 if (nextBegin != -1) {
@@ -405,7 +405,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                     || (offset > ts.offset() && offset < ts.offset() + ts.token().length())) {
                 if (ts.offset() + token.length() > offset + 1) {
                     // See if the remaining text is just whitespace
-                    String trailing = doc.getText(offset, Utilities.getRowEnd(doc, offset) - offset);
+                    String trailing = doc.getText(offset, LineDocumentUtils.getLineEnd(doc, offset) - offset);
                     if (trailing.trim().length() != 0) {
                         continueComment = true;
                     }
@@ -421,7 +421,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                 if (!continueComment) {
                     // See if the next line is a comment; if so we want to continue
                     // comments editing the middle of the comment
-                    int nextLine = Utilities.getRowEnd(doc, offset) + 1;
+                    int nextLine = LineDocumentUtils.getLineEnd(doc, offset) + 1;
                     if (nextLine < doc.getLength()) {
                         int nextLineFirst = Utilities.getRowFirstNonWhite(doc, nextLine);
                         if (nextLineFirst != -1) {
@@ -437,7 +437,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
 
             if (continueComment) {
                 // Line comments should continue
-                int indent = GsfUtilities.getLineIndent(doc, offset);
+                int indent = GsfUtilities.getLineIndent((Document)doc, offset);
                 StringBuilder sb = new StringBuilder();
                 if (offset != begin || offset <= 0) {
                     sb.append("\n");
@@ -446,7 +446,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                 sb.append("//"); // NOI18N
                 // Copy existing indentation
                 int afterSlash = begin + 2;
-                String line = doc.getText(afterSlash, Utilities.getRowEnd(doc, afterSlash) - afterSlash);
+                String line = doc.getText(afterSlash, LineDocumentUtils.getLineEnd(doc, afterSlash) - afterSlash);
                 for (int i = 0; i < line.length(); i++) {
                     char c = line.charAt(i);
                     if (c == ' ' || c == '\t') {
@@ -505,12 +505,12 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
      * @throws BadLocationException 
      */
     private int getNextLineIndentation(BaseDocument doc, int offset) throws BadLocationException {
-        int indent = GsfUtilities.getLineIndent(doc, offset);
+        int indent = GsfUtilities.getLineIndent((Document)doc, offset);
         int currentOffset = offset;
         while (currentOffset > 0) {
-            if (!Utilities.isRowEmpty(doc, currentOffset) && !Utilities.isRowWhite(doc, currentOffset)
+            if (!LineDocumentUtils.isLineEmpty(doc, currentOffset) && !LineDocumentUtils.isLineWhitespace(doc, currentOffset)
                     && !LexUtilities.isCommentOnlyLine(doc, currentOffset, language)) {
-                indent = GsfUtilities.getLineIndent(doc, currentOffset);
+                indent = GsfUtilities.getLineIndent((Document)doc, currentOffset);
                 int parenBalance = LexUtilities.getLineBalance(doc, currentOffset,
                         JsTokenId.BRACKET_LEFT_PAREN, JsTokenId.BRACKET_RIGHT_PAREN);
                 if (parenBalance < 0) {
@@ -523,7 +523,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                 }
                 return indent;
             }
-            currentOffset = Utilities.getRowStart(doc, currentOffset) - 1;
+            currentOffset = LineDocumentUtils.getLineStart(doc, currentOffset) - 1;
         }
 
         return indent;
@@ -563,7 +563,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
         boolean balancedAfter = false;
 
         do {
-            Token t = ts.token();
+	    Token<? extends JsTokenId> t = ts.token();
 
             if (t.id() == JsTokenId.BRACKET_LEFT_CURLY) {
                 balance++;
@@ -574,7 +574,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
 
         for (TokenSequenceIterator tsi = new TokenSequenceIterator(TokenHierarchy.get(doc).tokenSequenceList(ts.languagePath(), caretOffset, doc.getLength()), false); tsi.hasMore();) {
             TokenSequence<?> sq = tsi.getSequence();
-            Token t = sq.token();
+	    Token<?> t = sq.token();
 
             if (t.id() == JsTokenId.BRACKET_LEFT_CURLY) {
                 balance++;
@@ -592,7 +592,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
             return false;
         }
 
-        int caretRowStartOffset = org.netbeans.editor.Utilities.getRowStart(doc, caretOffset);
+        int caretRowStartOffset = LineDocumentUtils.getLineStart(doc, caretOffset);
         ts = LexUtilities.getPositionedSequence(doc, caretOffset, language);
         if (ts == null) {
             return false;
@@ -635,7 +635,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
      * character on the caret row is returned.
      */
     private int getRowOrBlockEnd(BaseDocument doc, int caretOffset, boolean[] insert) throws BadLocationException {
-        int rowEnd = org.netbeans.editor.Utilities.getRowLastNonWhite(doc, caretOffset);
+        int rowEnd = LineDocumentUtils.getLineLastNonWhitespace(doc, caretOffset);
         if (rowEnd == -1 || caretOffset >= rowEnd) {
             return caretOffset;
         }
@@ -704,7 +704,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
 
         int balance = 0;
         while (ts.movePrevious()) {
-            Token t = ts.token();
+	    Token<? extends JsTokenId> t = ts.token();
 
             if (t.id() == JsTokenId.BRACKET_RIGHT_CURLY) {
                 balance++;
@@ -732,7 +732,7 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
                         if (prevLineStart >= 0) {
                             return IndentUtils.lineIndent(doc, lineStart);
                         } else {
-                            return GsfUtilities.getLineIndent(doc, offset);
+                            return GsfUtilities.getLineIndent((Document)doc, offset);
                         }
                     }
 
@@ -760,21 +760,21 @@ public class JsTypedBreakInterceptor implements TypedBreakInterceptor {
         } catch (BadLocationException ex) {
             LOGGER.log(Level.INFO, null, ex);
         }
-        return GsfUtilities.getLineIndent(doc, offset);
+        return GsfUtilities.getLineIndent((Document)doc, offset);
     }
 
     private boolean isDocToken(JsTokenId id) {
         return id == JsTokenId.BLOCK_COMMENT || id == JsTokenId.DOC_COMMENT;
     }
 
-    private static boolean hasCommentEnd(TokenSequence ts) {
+    private static boolean hasCommentEnd(TokenSequence<? extends JsDocumentationTokenId> ts) {
         while (ts.moveNext()) {
-            Token<JsDocumentationTokenId> token = ts.token();
+	    Token<? extends JsDocumentationTokenId> token = ts.token();
             if (token.id() == JsDocumentationTokenId.COMMENT_END) {
                 return true;
             } else if (CharSequenceUtilities.endsWith(token.text(), "/")) { //NOI18N
                 if (ts.moveNext()) {
-                    Token<JsDocumentationTokenId> nextToken = ts.token();
+                    Token<? extends JsDocumentationTokenId> nextToken = ts.token();
                     if (CharSequenceUtilities.textEquals(nextToken.text(), "/")) { //NOI18N
                         ts.movePrevious();
                         continue;
